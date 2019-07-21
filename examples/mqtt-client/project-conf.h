@@ -43,7 +43,7 @@
  * Ignored if MQTT_CLIENT_CONF_WITH_IBM_WATSON is 1
  */
 #define MQTT_CLIENT_CONF_BROKER_IP_ADDR "fd00::1"
-
+#define MQTT_CLIENT_CONF_ORG_ID "ssl"
 /*
  * The Organisation ID.
  *
@@ -61,7 +61,7 @@
  *
  * Ignored in Watson mode: In this mode the username is always "use-token-auth"
  */
-#define MQTT_CLIENT_CONF_USERNAME "mqtt-client-username"
+#define MQTT_CLIENT_CONF_USERNAME "sslusr"
 
 /*
  * The MQTT auth token (password) used when connecting to the MQTT broker.
@@ -70,7 +70,7 @@
  *
  * Transported in cleartext!
  */
-#define MQTT_CLIENT_CONF_AUTH_TOKEN "AUTHTOKEN"
+#define MQTT_CLIENT_CONF_AUTH_TOKEN "sslpwd"
 /*---------------------------------------------------------------------------*/
 #endif /* PROJECT_CONF_H_ */
 /*---------------------------------------------------------------------------*/
