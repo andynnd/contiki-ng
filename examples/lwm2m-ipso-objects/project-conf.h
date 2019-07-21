@@ -40,6 +40,9 @@
 #define PLATFORM_REBOOT watchdog_reboot
 #endif
 
+/* Config Endpoint name */
+#define LWM2M_ENGINE_CLIENT_ENDPOINT_PREFIX    "myDevice00000000005"
+
 #if BOARD_SENSORTAG
 /* Real sensor is present... */
 #else
