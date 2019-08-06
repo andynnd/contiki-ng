@@ -177,6 +177,7 @@ static uint8_t state;
 #define DEFAULT_PUBLISH_INTERVAL    (30 * CLOCK_SECOND)
 #define DEFAULT_KEEP_ALIVE_TIMER    60
 #define DEFAULT_RSSI_MEAS_INTERVAL  (CLOCK_SECOND * 30)
+#define DEVICE_ID	"002"
 /*---------------------------------------------------------------------------*/
 #define MQTT_CLIENT_SENSOR_NONE     (void *)0xFFFFFFFF
 /*---------------------------------------------------------------------------*/
@@ -250,7 +251,7 @@ static const uint8_t mqtt_client_extension_count = 0;
 /*---------------------------------------------------------------------------*/
 PROCESS(mqtt_client_process, "MQTT Client");
 /*---------------------------------------------------------------------------*/
-static int
+/*static int
 ipaddr_sprintf(char *buf, uint8_t buf_len, const uip_ipaddr_t *addr)
 {
   uint16_t a;
@@ -273,7 +274,7 @@ ipaddr_sprintf(char *buf, uint8_t buf_len, const uip_ipaddr_t *addr)
   }
 
   return len;
-}
+}*/
 /*---------------------------------------------------------------------------*/
 static void
 echo_reply_handler(uip_ipaddr_t *source, uint8_t ttl, uint8_t *data,
@@ -291,25 +292,35 @@ publish_led_off(void *d)
 }
 /*---------------------------------------------------------------------------*/
 static void
-pub_handler(const char *topic, uint16_t topic_len, const uint8_t *chunk,
+sub_handler(const char *topic, uint16_t topic_len, const uint8_t *chunk,
             uint16_t chunk_len)
 {
-  LOG_DBG("Pub Handler: topic='%s' (len=%u), chunk_len=%u\n", topic,
+  LOG_DBG("Sub Handler: topic='%s' (len=%u), chunk_len=%u\n", topic,
           topic_len, chunk_len);
 
   /* If we don't like the length, ignore */
-  if(topic_len != 23 || chunk_len != 1) {
+/*  if(topic_len != 23 || chunk_len != 1) {
     LOG_ERR("Incorrect topic or chunk len. Ignored\n");
     return;
   }
-
+*/
   /* If the format != json, ignore */
-  if(strncmp(&topic[topic_len - 4], "json", 4) != 0) {
+/*  if(strncmp(&topic[topic_len - 4], "json", 4) != 0) {
     LOG_ERR("Incorrect format\n");
   }
 
   if(strncmp(&topic[10], "leds", 4) == 0) {
     LOG_DBG("Received MQTT SUB\n");
+    if(chunk[0] == '1') {
+      leds_on(LEDS_RED);
+    } else if(chunk[0] == '0') {
+      leds_off(LEDS_RED);
+    }
+    return;
+  }
+*/
+  if(strncmp(&topic[4], "cmd", 3) == 0) {
+    LOG_DBG("Received MQTT SUB cmd\n");
     if(chunk[0] == '1') {
       leds_on(LEDS_RED);
     } else if(chunk[0] == '0') {
@@ -346,7 +357,7 @@ mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data)
               "size is %i bytes.\n", msg_ptr->topic, msg_ptr->payload_length);
     }
 
-    pub_handler(msg_ptr->topic, strlen(msg_ptr->topic),
+    sub_handler(msg_ptr->topic, strlen(msg_ptr->topic),
                 msg_ptr->payload_chunk, msg_ptr->payload_length);
     break;
   }
@@ -371,7 +382,7 @@ mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data)
 static int
 construct_pub_topic(void)
 {
-  int len = snprintf(pub_topic, BUFFER_SIZE, "iot-2/evt/%s/fmt/json",
+  int len = snprintf(pub_topic, BUFFER_SIZE, "iot/%s",
                      conf.event_type_id);
 
   /* len < 0: Error. Len >= BUFFER_SIZE: Buffer too small */
@@ -386,7 +397,7 @@ construct_pub_topic(void)
 static int
 construct_sub_topic(void)
 {
-  int len = snprintf(sub_topic, BUFFER_SIZE, "iot-2/cmd/%s/fmt/json",
+  int len = snprintf(sub_topic, BUFFER_SIZE, "iot/%s",
                      conf.cmd_type);
 
   /* len < 0: Error. Len >= BUFFER_SIZE: Buffer too small */
@@ -498,7 +509,7 @@ publish(void)
   int len;
   int remaining = APP_BUFFER_SIZE;
   int i;
-  char def_rt_str[64];
+  //char def_rt_str[64];
 
   seq_nr_value++;
 
@@ -506,9 +517,9 @@ publish(void)
 
   len = snprintf(buf_ptr, remaining,
                  "{"
-                 "\"d\":{"
-                 "\"Platform\":\""CONTIKI_TARGET_STRING"\","
+                 "\"id\":\"004\","
 #ifdef CONTIKI_BOARD_STRING
+                 "\"Platform\":\""CONTIKI_TARGET_STRING"\","
                  "\"Board\":\""CONTIKI_BOARD_STRING"\","
 #endif
                  "\"Seq #\":%d,"
@@ -525,12 +536,25 @@ publish(void)
   buf_ptr += len;
 
   /* Put our Default route's string representation in a buffer */
-  memset(def_rt_str, 0, sizeof(def_rt_str));
+/*  memset(def_rt_str, 0, sizeof(def_rt_str));
   ipaddr_sprintf(def_rt_str, sizeof(def_rt_str), uip_ds6_defrt_choose());
 
   len = snprintf(buf_ptr, remaining,
                  ",\"Def Route\":\"%s\",\"RSSI (dBm)\":%d",
                  def_rt_str, def_rt_rssi);
+
+  if(len < 0 || len >= remaining) {
+    LOG_ERR("Buffer too short. Have %d, need %d + \\0\n", remaining,
+            len);
+    return;
+  }
+  remaining -= len;
+  buf_ptr += len;
+*/
+  // Put RSSI
+  len = snprintf(buf_ptr, remaining,
+                 ",\"RSSI (dBm)\":%d",
+                 def_rt_rssi);
 
   if(len < 0 || len >= remaining) {
     LOG_ERR("Buffer too short. Have %d, need %d + \\0\n", remaining,
@@ -553,7 +577,7 @@ publish(void)
     buf_ptr += len;
   }
 
-  len = snprintf(buf_ptr, remaining, "}}");
+  len = snprintf(buf_ptr, remaining, "}");
 
   if(len < 0 || len >= remaining) {
     LOG_ERR("Buffer too short. Have %d, need %d + \\0\n", remaining,
